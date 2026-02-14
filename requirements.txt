@@ -21,4 +21,5 @@ pandas
 mistralai
 pymongo
 twilio
+fastapi
 python-multipart
