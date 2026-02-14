@@ -19,14 +19,15 @@ chroma_db = Chroma(
 # -------------------------------------------------------
 # LangGraph State
 # -------------------------------------------------------
-class AgentState(dict):
+from typing import TypedDict, List, Dict, Any
+
+class AgentState(TypedDict, total=False):
     user_query: str
     issue_type: str
-    retrieved_docs: list
+    retrieved_docs: List[Any]
     final_answer: str
-    threat_json: dict
-    escalation: dict
-
+    threat_json: Dict[str, Any]
+    escalation_data: Dict[str, Any]
 
 # -------------------------------------------------------
 # MISTRAL CLIENT
@@ -128,7 +129,7 @@ def escalation_agent(state: AgentState):
     requires_escalation = threat.get("requires_escalation", False)
 
     if severity == "High" or requires_escalation:
-        state["escalation"] = {
+        state["escalation_data"] = {
             "timestamp": str(datetime.utcnow()),
             "user_message": state["user_query"],
             "issue_type": state.get("issue_type", "Unknown"),
@@ -188,7 +189,7 @@ def generate_answer(state: AgentState):
     User Query: {state['user_query']}
     Issue: {state['issue_type']}
     Threat: {json.dumps(state['threat_json'], indent=2)}
-    Escalation: {json.dumps(state['escalation'], indent=2)}
+    Escalation: {json.dumps(state.get('escalation_data', {}), indent=2)}
 
     SOP:
     {rag_text}
@@ -217,15 +218,15 @@ def generate_answer(state: AgentState):
 builder = StateGraph(AgentState)
 
 builder.add_node("detect_threat", detect_threat)
-builder.add_node("escalation", escalation_agent)
+builder.add_node("escalation_node", escalation_agent)
 builder.add_node("detect_issue", detect_issue_type)
 builder.add_node("retrieve_sop", retrieve_sop)
 builder.add_node("generate", generate_answer)
 
 builder.set_entry_point("detect_threat")
 
-builder.add_edge("detect_threat", "escalation")
-builder.add_edge("escalation", "detect_issue")
+builder.add_edge("detect_threat", "escalation_node")
+builder.add_edge("escalation_node", "detect_issue")
 builder.add_edge("detect_issue", "retrieve_sop")
 builder.add_edge("retrieve_sop", "generate")
 builder.add_edge("generate", END)
