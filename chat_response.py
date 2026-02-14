@@ -4,7 +4,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
-from Chatbot.vector_stores.chromadb_store import LocalChromaDb
+from vector_stores.chromadb_store import LocalChromaDb
 from langchain_openai import AzureChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from config import Config
@@ -44,3 +44,4 @@ Question:
             print(f"Attempt {attempt+1} failed: {e}")
             time.sleep(2 ** attempt)  # exponential backoff
     return "Unable to generate response at this time. Please try again later."
+
