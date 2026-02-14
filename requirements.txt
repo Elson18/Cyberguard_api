@@ -23,3 +23,5 @@ pymongo
 twilio
 fastapi
 python-multipart
+langchain_huggingface
+langchain_openai
