@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cybersecurity Incident Report</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link rel="stylesheet" href="style2.css" />
+</head>
+
+<body>
+
+    <form class="contact-form" id="incidentForm" enctype="multipart/form-data">
+
+        <div class="contact-label">Cybersecurity Incident Report</div>
+
+        <!-- Full Name -->
+        <div class="input-box">
+            <i class="fas fa-user input-icon"></i>
+            <input type="text" name="fullname" placeholder=" " required>
+            <label>Full Name</label>
+        </div>
+
+        <!-- Email -->
+        <div class="input-box">
+            <i class="fas fa-envelope input-icon"></i>
+            <input type="email" name="email" placeholder=" " required>
+            <label>Email Address</label>
+        </div>
+
+        <!-- Phone -->
+        <div class="input-box">
+            <i class="fas fa-phone input-icon"></i>
+            <input type="tel" name="phone" placeholder=" " required>
+            <label>Phone Number</label>
+        </div>
+
+        <!-- Incident Type -->
+        <div class="input-box">
+            <i class="fas fa-shield-alt input-icon"></i>
+            <select name="incident_type" required>
+                <option value="" disabled selected></option>
+                <option>Online Fraud</option>
+                <option>Phishing</option>
+                <option>Hacking Attempt</option>
+                <option>Identity Theft</option>
+                <option>Malware / Virus</option>
+                <option>Cyber Bullying</option>
+                <option>Other</option>
+            </select>
+            <label>Type of Cyber Incident</label>
+        </div>
+
+        <!-- Incident Description -->
+        <div class="input-box feedback-field">
+            <i class="fas fa-file-alt input-icon"></i>
+            <textarea name="description" placeholder=" " required></textarea>
+            <label>Incident Description</label>
+        </div>
+
+        <!-- Screenshot Upload -->
+        <div class="input-box">
+            <!-- <i class="fas fa-image input-icon "></i> -->
+            <input type="file" name="screenshot" accept="image/*" multiple required>
+            <label>Upload Screenshot Evidence</label>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" class="btn-submit">
+            Report Incident
+        </button>
+
+    </form>
+    <script>
+        const username = localStorage.getItem("username");
+        if (!username) location.href = "login.html";
+
+        document.getElementById("incidentForm").addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+
+            try {
+                const res = await fetch("http://127.0.0.1:8765/report", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    alert("❌ Failed to submit incident");
+                    return;
+                }
+
+                alert("✅ Incident reported successfully!\nCyber team has been notified.");
+
+                // ✅ IMPORTANT: redirect with flag
+                window.location.href = "index.html?from=complaint";
+
+            } catch (err) {
+                alert("⚠️ Server error. Please try again later.");
+                console.error(err);
+            }
+        });
+    </script>
+
+
+
+</body>
+
+</html>
