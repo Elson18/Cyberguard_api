@@ -9,7 +9,6 @@ import uvicorn
 import asyncio
 from typing import List
 from send_mail import send_cybercrime_report
-from emotion_handler import emotion_prompt
 import os
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -208,4 +207,5 @@ async def report_incident(
     return {"message": "Incident reported successfully"}
 
 if __name__ == "__main__":
+
     uvicorn.run(app, port=8765, log_level="info")
