@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import Flask, request, jsonify
 from config import Config
-from Chatbot.vector_stores.chromadb_store import LocalChromaDb
+from vector_stores.chromadb_store import LocalChromaDb
 from chat_response import generate_response_mistral
 
 text_file = ""
@@ -58,4 +58,5 @@ def chatbot_llm_response():
 
 
 if __name__ == "__main__":
+
     app.run(debug=True)
