@@ -1,4 +1,4 @@
-from langchain_community.document_loaders import PyPDFLoader, CSVLoader, TextLoader, JSONLoader,DedocFileLoader
+from langchain_community.document_loaders import PyPDFLoader, CSVLoader, TextLoader, JSONLoader
 import PyPDF2
 import pandas as pd
 
@@ -37,14 +37,6 @@ def extract_Json_text(document):
         text_extract += text.page_content
     return text_extract
 
-def extract_Doc_text(document):
-    text_extract = ""
-    loader = DedocFileLoader(file_path=document)
-    documents = loader.load()
-    for text in documents:
-        text_extract += text.page_content
-    return text_extract
-
 def extract_Excel_text(document):
     text_extract = ""
     excel_file = pd.ExcelFile(document)
@@ -67,9 +59,8 @@ def extract_file_text(document):
         return extract_Txt_text(document)
     elif document.lower().endswith(".json"):
         return extract_Json_text(document)
-    elif document.lower().endswith((".doc", ".docx")):
-        return extract_Doc_text(document)
     elif document.lower().endswith((".xls", ".xlsx")):
         return extract_Excel_text(document)
     else:
+
         raise ValueError(f"Unsupported file type: {document}")
