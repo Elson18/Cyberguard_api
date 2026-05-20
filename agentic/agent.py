@@ -1,24 +1,36 @@
 from langgraph.graph import StateGraph, END
 from langchain_chroma import Chroma
 from config import Config
-from mistralai import Mistral
+from groq import Groq
+
 import json
 import re
 from datetime import datetime
+from typing import TypedDict, List, Dict, Any
 
-config = Config()
 # -------------------------------------------------------
-# Load ChromaDB
+# CONFIG
+# -------------------------------------------------------
+config = Config()
+
+# -------------------------------------------------------
+# CHROMADB
 # -------------------------------------------------------
 chroma_db = Chroma(
     collection_name=config.COLLECTION_NAME,
     persist_directory=config.PERSIST_DIRECTORY
 )
-# -------------------------------------------------------
-# LangGraph State
-# -------------------------------------------------------
-from typing import TypedDict, List, Dict, Any
 
+# -------------------------------------------------------
+# GROQ CLIENT
+# -------------------------------------------------------
+client = Groq(api_key=config.GROQ_API_KEY)
+
+MODEL = "llama3-70b-8192"
+
+# -------------------------------------------------------
+# STATE
+# -------------------------------------------------------
 class AgentState(TypedDict, total=False):
     user_query: str
     issue_type: str
@@ -28,17 +40,37 @@ class AgentState(TypedDict, total=False):
     escalation_data: Dict[str, Any]
 
 # -------------------------------------------------------
-# MISTRAL CLIENT
+# HELPER FUNCTION
 # -------------------------------------------------------
-mistral = Mistral(api_key=config.MISTRALAI_API_KEY)
-MODEL = "mistral-small-latest"
+def groq_chat(prompt: str, system_prompt: str = None):
 
+    messages = []
+
+    if system_prompt:
+        messages.append({
+            "role": "system",
+            "content": system_prompt
+        })
+
+    messages.append({
+        "role": "user",
+        "content": prompt
+    })
+
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=messages,
+        temperature=0.3
+    )
+
+    return response.choices[0].message.content
+
+
+# -------------------------------------------------------
+# CYBER INTENT CLASSIFIER
+# -------------------------------------------------------
 def classify_intent(query: str) -> bool:
-    """
-    Returns True if the query is related to cybercrime.
-    Returns False if it is a normal/general question.
-    """
-    
+
     prompt = f"""
     Determine if the following user query is related to:
     cybercrime, cyber safety, cyber fraud, online threats,
@@ -48,35 +80,27 @@ def classify_intent(query: str) -> bool:
     Query: "{query}"
 
     Respond with ONLY one word:
-    - "cyber"   → if it is cybercrime related
-    - "general" → if it is NOT cyber related
+    - cyber
+    - general
     """
 
-    response = mistral.chat.complete(
-        model=MODEL,
-        messages=[{"role": "user", "content": prompt}]
-    ).choices[0].message.content.strip().lower()
+    response = groq_chat(prompt)
 
-    return response == "cyber"
+    return response.strip().lower() == "cyber"
 
 
 # -------------------------------------------------------
-# Helper — STRICT JSON LLM CALL
+# STRICT JSON LLM CALL
 # -------------------------------------------------------
 def call_llm(prompt: str):
 
-    response = mistral.chat.complete(
-        model=MODEL,
-        messages=[
-            {"role": "system", "content": "You MUST answer only with valid JSON. No explanation. No markdown."},
-            {"role": "user", "content": prompt}
-        ]
+    content = groq_chat(
+        prompt,
+        system_prompt="You MUST answer only with valid JSON. No explanation. No markdown."
     )
 
-    content = response.choices[0].message.content
-
-    # -------- Extract JSON if model adds text ----------
     json_match = re.search(r'{.*}', content, re.DOTALL)
+
     if json_match:
         content = json_match.group(0)
 
@@ -84,9 +108,10 @@ def call_llm(prompt: str):
 
 
 # -------------------------------------------------------
-# Node 1 — Threat Detection
+# NODE 1 — THREAT DETECTION
 # -------------------------------------------------------
 def detect_threat(state: AgentState):
+
     prompt = f"""
     Analyze this user message for threats.
 
@@ -105,9 +130,8 @@ def detect_threat(state: AgentState):
 
     try:
         state["threat_json"] = json.loads(result)
-    except Exception as e:
-        print("❌ Invalid JSON from model:", result)
 
+    except Exception:
         state["threat_json"] = {
             "threat_type": "Unknown",
             "severity": "Low",
@@ -119,14 +143,17 @@ def detect_threat(state: AgentState):
 
 
 # -------------------------------------------------------
-# Node 2 — Emergency Escalation
+# NODE 2 — ESCALATION
 # -------------------------------------------------------
 def escalation_agent(state: AgentState):
+
     threat = state["threat_json"]
+
     severity = threat.get("severity", "Low")
     requires_escalation = threat.get("requires_escalation", False)
 
     if severity == "High" or requires_escalation:
+
         state["escalation_data"] = {
             "timestamp": str(datetime.utcnow()),
             "user_message": state["user_query"],
@@ -136,8 +163,10 @@ def escalation_agent(state: AgentState):
             "reason": threat.get("reason"),
             "action_required": "URGENT – Notify Cyber Cell Immediately"
         }
+
     else:
-        state["escalation"] = {
+
+        state["escalation_data"] = {
             "severity": severity,
             "action_required": "No escalation needed"
         }
@@ -146,9 +175,10 @@ def escalation_agent(state: AgentState):
 
 
 # -------------------------------------------------------
-# Node 3 — Issue Classification
+# NODE 3 — ISSUE CLASSIFICATION
 # -------------------------------------------------------
 def detect_issue_type(state: AgentState):
+
     prompt = f"""
     Classify the cyber issue for this query:
 
@@ -157,43 +187,49 @@ def detect_issue_type(state: AgentState):
     Respond ONLY with the category text.
     """
 
-    issue = mistral.chat.complete(
-        model=MODEL,
-        messages=[{"role": "user", "content": prompt}]
-    ).choices[0].message.content
+    issue = groq_chat(prompt)
 
     state["issue_type"] = issue.strip()
+
     return state
 
 
 # -------------------------------------------------------
-# Node 4 — Retrieve SOP
+# NODE 4 — RETRIEVE SOP
 # -------------------------------------------------------
 def retrieve_sop(state: AgentState):
-    state["retrieved_docs"] = chroma_db.similarity_search(state["user_query"], k=3)
+
+    state["retrieved_docs"] = chroma_db.similarity_search(
+        state["user_query"],
+        k=3
+    )
+
     return state
 
 
 # -------------------------------------------------------
-# Node 5 — Final Answer
+# NODE 5 — FINAL ANSWER
 # -------------------------------------------------------
-from groq import Groq
-import json
-
-# Initialize Groq client
-client = Groq(api_key=config.GROQ_API_KEY)
-
 def generate_answer(state: AgentState):
 
-    rag_text = "\n\n".join([doc.page_content for doc in state["retrieved_docs"]])
+    rag_text = "\n\n".join(
+        [doc.page_content for doc in state["retrieved_docs"]]
+    )
 
     prompt = f"""
-    Create a structured cybercrime help response:
+    Create a structured cybercrime help response.
 
-    User Query: {state['user_query']}
-    Issue: {state['issue_type']}
-    Threat: {json.dumps(state['threat_json'], indent=2)}
-    Escalation: {json.dumps(state.get('escalation_data', {}), indent=2)}
+    User Query:
+    {state['user_query']}
+
+    Issue:
+    {state['issue_type']}
+
+    Threat:
+    {json.dumps(state['threat_json'], indent=2)}
+
+    Escalation:
+    {json.dumps(state.get('escalation_data', {}), indent=2)}
 
     SOP:
     {rag_text}
@@ -207,25 +243,15 @@ def generate_answer(state: AgentState):
     - Reporting Link
     """
 
-    response = client.chat.completions.create(
-        model="llama3-70b-8192",   # or mixtral-8x7b-32768
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        temperature=0.3
-    )
-
-    answer = response.choices[0].message.content
+    answer = groq_chat(prompt)
 
     state["final_answer"] = answer.strip()
+
     return state
 
 
 # -------------------------------------------------------
-# Build Flow
+# BUILD GRAPH
 # -------------------------------------------------------
 builder = StateGraph(AgentState)
 
