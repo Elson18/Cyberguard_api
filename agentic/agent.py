@@ -7,7 +7,6 @@ import re
 from datetime import datetime
 
 config = Config()
-
 # -------------------------------------------------------
 # Load ChromaDB
 # -------------------------------------------------------
@@ -15,7 +14,6 @@ chroma_db = Chroma(
     collection_name=config.COLLECTION_NAME,
     persist_directory=config.PERSIST_DIRECTORY
 )
-
 # -------------------------------------------------------
 # LangGraph State
 # -------------------------------------------------------
@@ -179,6 +177,12 @@ def retrieve_sop(state: AgentState):
 # -------------------------------------------------------
 # Node 5 — Final Answer
 # -------------------------------------------------------
+from groq import Groq
+import json
+
+# Initialize Groq client
+client = Groq(api_key=config.GROQ_API_KEY)
+
 def generate_answer(state: AgentState):
 
     rag_text = "\n\n".join([doc.page_content for doc in state["retrieved_docs"]])
@@ -203,10 +207,18 @@ def generate_answer(state: AgentState):
     - Reporting Link
     """
 
-    answer = mistral.chat.complete(
-        model=MODEL,
-        messages=[{"role": "user", "content": prompt}]
-    ).choices[0].message.content
+    response = client.chat.completions.create(
+        model="llama3-70b-8192",   # or mixtral-8x7b-32768
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature=0.3
+    )
+
+    answer = response.choices[0].message.content
 
     state["final_answer"] = answer.strip()
     return state

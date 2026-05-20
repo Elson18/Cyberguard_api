@@ -13,6 +13,6 @@ class Config:
 
         # self.select_model = {}
 
-        self.MISTRALAI_API_KEY = os.getenv("MISTRALAI_API_KEY")
+        self.GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
         self.MONGO_DB_URL = os.getenv("MONGO_DB_URL")
