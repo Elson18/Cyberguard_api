@@ -2,7 +2,7 @@ from fastapi import FastAPI,HTTPException, Form, UploadFile,File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel,EmailStr
 from agentic.agent import graph, classify_intent
-from chat_response import generate_response_mistral
+from chat_response import generate_response_groq
 from database.mongodb import MongoDb
 from severity import extract_severity
 import uvicorn
@@ -12,7 +12,7 @@ from send_mail import send_cybercrime_report
 import os
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-
+import traceback
 
 app = FastAPI(title="MultiThread ChatBot API")
 # Initialize MongoDB
@@ -70,13 +70,13 @@ async def run_agent(data: QueryInput):
         user_email = data.username
 
         is_cyber = classify_intent(query)
-
+        print(is_cyber)
         if is_cyber:
             print("Cyber Security Agent")
             result = await run_cyber_agent(query)
             final_answer = result.get("final_answer", "No response")
             severity = extract_severity(final_answer)
-
+            print(severity)
             # Prepend severity message
             if severity in ["low"]:
                 severity_message = (
@@ -120,7 +120,7 @@ async def run_agent(data: QueryInput):
 
         else:
             print("Multimodel Url")
-            answer = generate_response_mistral(query)
+            answer = generate_response_groq(query)
             return {
                 "answer": answer,
                 "mode": "chatbot",
@@ -128,6 +128,7 @@ async def run_agent(data: QueryInput):
             }
 
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
