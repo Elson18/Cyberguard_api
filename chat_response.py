@@ -37,7 +37,7 @@ Question:
     for attempt in range(max_retries):
         try:
             response = client.chat.completions.create(
-                model="llama3-70b-8192",   # You can also use mixtral-8x7b-32768
+                model="openai/gpt-oss-120b",   # You can also use mixtral-8x7b-32768
                 messages=[
                     {
                         "role": "user",

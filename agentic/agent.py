@@ -8,17 +8,24 @@ import re
 from datetime import datetime
 from typing import TypedDict, List, Dict, Any
 
+from langchain_huggingface import HuggingFaceEmbeddings 
+
 # -------------------------------------------------------
 # CONFIG
 # -------------------------------------------------------
 config = Config()
+
+embedding_fn = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
 
 # -------------------------------------------------------
 # CHROMADB
 # -------------------------------------------------------
 chroma_db = Chroma(
     collection_name=config.COLLECTION_NAME,
-    persist_directory=config.PERSIST_DIRECTORY
+    persist_directory=config.PERSIST_DIRECTORY,
+    embedding_function=embedding_fn 
 )
 
 # -------------------------------------------------------
@@ -26,7 +33,7 @@ chroma_db = Chroma(
 # -------------------------------------------------------
 client = Groq(api_key=config.GROQ_API_KEY)
 
-MODEL = "llama3-70b-8192"
+MODEL = "openai/gpt-oss-120b"
 
 # -------------------------------------------------------
 # STATE
