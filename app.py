@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from flask import Flask, request, jsonify
 from config import Config
 from vector_stores.chromadb_store import LocalChromaDb
-from chat_response import generate_response_mistral
+from chat_response import generate_response_groq
 
 text_file = ""
 
@@ -50,7 +50,7 @@ def chatbot_llm_response():
         data = request.json
         query = data.get("query", None)
 
-        generate_llm_response = generate_response_mistral(query)
+        generate_llm_response = generate_response_groq(query)
 
         return jsonify ({"ChatBot": generate_llm_response})
     except Exception as e:

@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import TypedDict, List, Dict, Any
 
 from langchain_huggingface import HuggingFaceEmbeddings 
+from chromadb.config import Settings
 
 # -------------------------------------------------------
 # CONFIG
@@ -22,12 +23,23 @@ embedding_fn = HuggingFaceEmbeddings(
 # -------------------------------------------------------
 # CHROMADB
 # -------------------------------------------------------
-chroma_db = Chroma(
-    collection_name=config.COLLECTION_NAME,
-    persist_directory=config.PERSIST_DIRECTORY,
-    embedding_function=embedding_fn 
+# -------------------------------------------------------
+# CHROMADB
+# -------------------------------------------------------
+import os
+
+import os
+import chromadb
+
+chroma_client = chromadb.PersistentClient(
+    path=config.PERSIST_DIRECTORY
 )
 
+chroma_db = Chroma(
+    collection_name=config.COLLECTION_NAME,
+    client=chroma_client,
+    embedding_function=embedding_fn,
+)
 # -------------------------------------------------------
 # GROQ CLIENT
 # -------------------------------------------------------
@@ -205,12 +217,8 @@ def detect_issue_type(state: AgentState):
 # NODE 4 — RETRIEVE SOP
 # -------------------------------------------------------
 def retrieve_sop(state: AgentState):
-
-    state["retrieved_docs"] = chroma_db.similarity_search(
-        state["user_query"],
-        k=3
-    )
-
+    docs = chroma_db.similarity_search(state["user_query"], k=3)
+    state["retrieved_docs"] = docs
     return state
 
 

@@ -25,7 +25,7 @@ class LocalChromaDb:
 
             self.vectorstore = Chroma(
                 collection_name=config.COLLECTION_NAME,
-                persist_directory=config.PERSIST_DIRECTORY_CHROMADB,
+                persist_directory=config.PERSIST_DIRECTORY,
                 embedding_function=self.embed_model
             )
 
@@ -38,7 +38,7 @@ class LocalChromaDb:
         self.vectorstore.add_documents(docs)
         return "Documents stored in ChromaDB"
 
-    def response_query(self, user_query, k=3):
+    def response_query(self, user_query, k=2):
         self.init_vectortore()
         results = self.vectorstore.similarity_search(user_query, k=k)
         return [doc.page_content for doc in results]

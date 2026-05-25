@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuroGuard</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 360px;
+      min-height: 420px;
+      font-family: 'Inter', sans-serif;
+      background: #0c0c14;
+      color: #e4e4e7;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 20px 16px;
+      background: linear-gradient(180deg, rgba(99, 102, 241, 0.08) 0%, transparent 100%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .header-logo {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    .header-text h1 {
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #c7d2fe, #e0e7ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-text p {
+      font-size: 0.65rem;
+      color: #71717a;
+      font-weight: 500;
+    }
+
+    /* ── Status Banner ── */
+    .status-banner {
+      margin: 16px 16px 0;
+      padding: 18px 20px;
+      border-radius: 16px;
+      text-align: center;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.4s ease;
+    }
+
+    .status-banner.safe {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.03));
+      border-color: rgba(34, 197, 94, 0.2);
+    }
+    .status-banner.suspicious {
+      background: linear-gradient(135deg, rgba(250, 204, 21, 0.1), rgba(250, 204, 21, 0.03));
+      border-color: rgba(250, 204, 21, 0.2);
+    }
+    .status-banner.harmful {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.03));
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+    .status-banner.loading {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(99, 102, 241, 0.03));
+      border-color: rgba(99, 102, 241, 0.2);
+    }
+
+    .status-icon {
+      font-size: 36px;
+      margin-bottom: 8px;
+      animation: fadeIn 0.5s ease;
+    }
+
+    .status-label {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .status-banner.safe .status-label { color: #4ade80; }
+    .status-banner.suspicious .status-label { color: #facc15; }
+    .status-banner.harmful .status-label { color: #f87171; }
+    .status-banner.loading .status-label { color: #818cf8; }
+
+    .status-sublabel {
+      font-size: 0.72rem;
+      color: #71717a;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.8); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* ── Domain Card ── */
+    .domain-card {
+      margin: 14px 16px 0;
+      padding: 14px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+    }
+
+    .domain-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #52525b;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .domain-value {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #d4d4d8;
+      word-break: break-all;
+    }
+
+    /* ── Analysis Cards ── */
+    .analysis-section {
+      padding: 14px 16px 0;
+    }
+
+    .analysis-title {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #52525b;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .analysis-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .analysis-row:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .row-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .row-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+    }
+
+    .row-icon.gemini {
+      background: rgba(99, 102, 241, 0.12);
+    }
+
+    .row-icon.serp {
+      background: rgba(14, 165, 233, 0.12);
+    }
+
+    .row-name {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #d4d4d8;
+    }
+
+    .row-sub {
+      font-size: 0.62rem;
+      color: #52525b;
+    }
+
+    .row-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.02em;
+    }
+
+    .badge-safe {
+      background: rgba(34, 197, 94, 0.12);
+      color: #4ade80;
+    }
+
+    .badge-suspicious {
+      background: rgba(250, 204, 21, 0.12);
+      color: #facc15;
+    }
+
+    .badge-harmful {
+      background: rgba(239, 68, 68, 0.12);
+      color: #f87171;
+    }
+
+    .badge-loading {
+      background: rgba(99, 102, 241, 0.12);
+      color: #818cf8;
+    }
+
+    .badge-clean {
+      background: rgba(34, 197, 94, 0.12);
+      color: #4ade80;
+    }
+
+    .badge-risky {
+      background: rgba(239, 68, 68, 0.12);
+      color: #f87171;
+    }
+
+    .badge-error {
+      background: rgba(113, 113, 122, 0.12);
+      color: #71717a;
+    }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(129, 140, 248, 0.3);
+      border-top-color: #818cf8;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      padding: 18px 16px 20px;
+      font-size: 0.65rem;
+      color: #3f3f46;
+    }
+
+    .footer span {
+      color: #6366f1;
+      font-weight: 700;
+    }
+
+    .footer .dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      margin-right: 4px;
+      vertical-align: middle;
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    .dot-green { background: #4ade80; }
+    .dot-yellow { background: #facc15; }
+    .dot-red { background: #f87171; }
+    .dot-blue { background: #818cf8; }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── Dashboard Button ── */
+    .dashboard-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin: 14px 16px 0; padding: 12px;
+      border-radius: 12px; border: 1px solid rgba(99,102,241,0.2);
+      background: rgba(99,102,241,0.08);
+      color: #818cf8; font-size: 0.82rem; font-weight: 700;
+      cursor: pointer; text-decoration: none;
+      font-family: inherit; transition: all 0.2s ease;
+    }
+    .dashboard-btn:hover {
+      background: rgba(99,102,241,0.15);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(99,102,241,0.2);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo">🛡️</div>
+    <div class="header-text">
+      <h1>NeuroGuard</h1>
+      <p>AI-Powered Threat Detection</p>
+    </div>
+  </div>
+
+  <!-- Status Banner -->
+  <div class="status-banner loading" id="statusBanner">
+    <div class="status-icon" id="statusIcon">🔍</div>
+    <div class="status-label" id="statusLabel">Analyzing...</div>
+    <div class="status-sublabel" id="statusSublabel">Checking website safety</div>
+  </div>
+
+  <!-- Domain -->
+  <div class="domain-card">
+    <div class="domain-label">Current Website</div>
+    <div class="domain-value" id="domainValue">Loading...</div>
+  </div>
+
+  <!-- Analysis Results -->
+  <div class="analysis-section">
+    <div class="analysis-title">Security Analysis</div>
+
+
+
+    <!-- SerpApi Row -->
+    <div class="analysis-row">
+      <div class="row-left">
+        <div class="row-icon serp">🔎</div>
+        <div>
+          <div class="row-name">SerpApi</div>
+          <div class="row-sub">Reputation Check</div>
+        </div>
+      </div>
+      <div class="row-badge badge-loading" id="serpBadge">
+        <span class="spinner"></span> Checking
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard Button -->
+  <button class="dashboard-btn" id="openDashboard">
+    📊 Activity Dashboard
+  </button>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span class="dot dot-blue" id="footerDot"></span>
+    Protected by <span>NeuroGuard AI</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

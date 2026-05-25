@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuroGuard — Activity Dashboard</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0a0f;
+      color: #e4e4e7;
+      min-height: 100vh;
+    }
+
+    /* ── Top Bar ── */
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 28px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .topbar-brand {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .topbar-logo {
+      width: 34px; height: 34px; border-radius: 10px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+    }
+    .topbar-title {
+      font-size: 1rem; font-weight: 800;
+      background: linear-gradient(135deg, #c7d2fe, #e0e7ff);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .topbar-subtitle { font-size: 0.65rem; color: #52525b; font-weight: 500; }
+    .topbar-actions { display: flex; gap: 8px; }
+    .btn-topbar {
+      padding: 8px 16px; border-radius: 10px; font-size: 0.78rem;
+      font-weight: 600; border: none; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-clear {
+      background: rgba(239,68,68,0.1); color: #f87171;
+      border: 1px solid rgba(239,68,68,0.2);
+    }
+    .btn-clear:hover { background: rgba(239,68,68,0.2); }
+    .btn-refresh {
+      background: rgba(99,102,241,0.1); color: #818cf8;
+      border: 1px solid rgba(99,102,241,0.2);
+    }
+    .btn-refresh:hover { background: rgba(99,102,241,0.2); }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+
+    /* ── Stats Grid ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 14px; margin-bottom: 24px;
+    }
+    .stat-card {
+      padding: 22px 20px; border-radius: 16px;
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.06);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .stat-label {
+      font-size: 0.68rem; text-transform: uppercase;
+      letter-spacing: 0.08em; color: #52525b; font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .stat-value {
+      font-size: 2rem; font-weight: 800;
+      background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .stat-card.safe .stat-value { background: linear-gradient(135deg, #4ade80, #22c55e); -webkit-background-clip: text; }
+    .stat-card.suspicious .stat-value { background: linear-gradient(135deg, #facc15, #eab308); -webkit-background-clip: text; }
+    .stat-card.harmful .stat-value { background: linear-gradient(135deg, #f87171, #ef4444); -webkit-background-clip: text; }
+    .stat-card.blocked .stat-value { background: linear-gradient(135deg, #fb923c, #f97316); -webkit-background-clip: text; }
+    .stat-icon { font-size: 1.3rem; margin-bottom: 6px; }
+
+    /* ── Activity Table ── */
+    .activity-section {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 18px; overflow: hidden;
+    }
+    .activity-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 22px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .activity-title {
+      font-size: 0.95rem; font-weight: 700;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .activity-count {
+      font-size: 0.68rem; background: rgba(99,102,241,0.12);
+      color: #818cf8; padding: 3px 10px; border-radius: 20px;
+      font-weight: 700;
+    }
+    .search-box {
+      padding: 8px 14px; border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #d4d4d8; font-size: 0.78rem; font-family: inherit;
+      outline: none; width: 220px; transition: border-color 0.2s;
+    }
+    .search-box:focus { border-color: rgba(99,102,241,0.4); }
+
+    .activity-table { width: 100%; border-collapse: collapse; }
+    .activity-table th {
+      font-size: 0.65rem; text-transform: uppercase;
+      letter-spacing: 0.08em; color: #52525b; font-weight: 600;
+      padding: 12px 16px; text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .activity-table td {
+      padding: 14px 16px; font-size: 0.82rem;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      vertical-align: middle;
+    }
+    .activity-table tr { transition: background 0.15s; }
+    .activity-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+
+    .domain-cell {
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .domain-name { font-weight: 600; color: #d4d4d8; }
+    .domain-url {
+      font-size: 0.68rem; color: #52525b;
+      max-width: 300px; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 4px 12px; border-radius: 20px;
+      font-size: 0.7rem; font-weight: 700;
+    }
+    .badge-safe { background: rgba(34,197,94,0.12); color: #4ade80; }
+    .badge-suspicious { background: rgba(250,204,21,0.12); color: #facc15; }
+    .badge-harmful { background: rgba(239,68,68,0.12); color: #f87171; }
+    .badge-unknown { background: rgba(113,113,122,0.12); color: #71717a; }
+
+    .action-allowed { color: #4ade80; font-weight: 600; font-size: 0.78rem; }
+    .action-blocked {
+      color: #f87171; font-weight: 700; font-size: 0.78rem;
+      display: flex; align-items: center; gap: 4px;
+    }
+
+    .time-cell { font-size: 0.72rem; color: #71717a; white-space: nowrap; }
+    .duration-cell { font-size: 0.72rem; color: #52525b; font-family: 'Courier New', monospace; }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.4; }
+    .empty-title { font-size: 1rem; font-weight: 700; color: #71717a; margin-bottom: 6px; }
+    .empty-sub { font-size: 0.82rem; color: #52525b; }
+
+    /* Animation for new rows */
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .activity-table tbody tr { animation: slideIn 0.3s ease; }
+
+    /* Live indicator */
+    .live-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #4ade80; display: inline-block;
+      margin-right: 6px; animation: pulse-live 2s ease infinite;
+    }
+    @keyframes pulse-live {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.4); }
+      50% { box-shadow: 0 0 0 6px rgba(74,222,128,0); }
+    }
+
+    /* Footer */
+    .footer {
+      text-align: center; padding: 24px; font-size: 0.68rem; color: #3f3f46;
+    }
+    .footer span { color: #6366f1; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo">🛡️</div>
+      <div>
+        <div class="topbar-title">NeuroGuard Dashboard</div>
+        <div class="topbar-subtitle">AI Cybersecurity Monitoring</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn-topbar btn-refresh" id="refreshBtn">🔄 Refresh</button>
+      <button class="btn-topbar btn-clear" id="clearBtn">🗑️ Clear History</button>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- Stats Cards -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-label">Websites Scanned</div>
+        <div class="stat-value" id="totalScanned">0</div>
+      </div>
+      <div class="stat-card safe">
+        <div class="stat-icon">🟢</div>
+        <div class="stat-label">Safe Sites</div>
+        <div class="stat-value" id="totalSafe">0</div>
+      </div>
+      <div class="stat-card suspicious">
+        <div class="stat-icon">🟡</div>
+        <div class="stat-label">Suspicious Sites</div>
+        <div class="stat-value" id="totalSuspicious">0</div>
+      </div>
+      <div class="stat-card harmful">
+        <div class="stat-icon">🔴</div>
+        <div class="stat-label">Harmful Sites</div>
+        <div class="stat-value" id="totalHarmful">0</div>
+      </div>
+      <div class="stat-card blocked">
+        <div class="stat-icon">🛡️</div>
+        <div class="stat-label">Threats Blocked</div>
+        <div class="stat-value" id="totalBlocked">0</div>
+      </div>
+    </div>
+
+    <!-- Activity Table -->
+    <div class="activity-section">
+      <div class="activity-header">
+        <div class="activity-title">
+          <span class="live-dot"></span>
+          Recent Activity
+          <span class="activity-count" id="activityCount">0 entries</span>
+        </div>
+        <input type="text" class="search-box" id="searchBox" placeholder="Search by domain or URL..." />
+      </div>
+      <table class="activity-table">
+        <thead>
+          <tr>
+            <th>Domain</th>
+            <th>AI Result</th>
+            <th>Action</th>
+            <th>Speed</th>
+            <th>Time</th>
+          </tr>
+        </thead>
+        <tbody id="activityBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <div class="empty-icon">🔍</div>
+        <div class="empty-title">No activity yet</div>
+        <div class="empty-sub">Start browsing and NeuroGuard will track your web activity here.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Protected by <span>NeuroGuard AI</span> · Real-time threat monitoring
+  </div>
+
+  <script src="history.js"></script>
+</body>
+</html>

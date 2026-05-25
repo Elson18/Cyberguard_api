@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Website Blocked — NeuroGuard</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0a0a0f;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(255, 40, 40, 0.12) 0%, transparent 60%),
+        radial-gradient(circle at 20% 80%, rgba(255, 60, 60, 0.06) 0%, transparent 40%);
+      color: #e4e4e7;
+      overflow: hidden;
+    }
+
+    .container {
+      text-align: center;
+      max-width: 560px;
+      padding: 44px 40px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 60, 60, 0.15);
+      border-radius: 24px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 0 60px rgba(255, 40, 40, 0.08), 0 25px 50px rgba(0, 0, 0, 0.4);
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .shield-icon {
+      width: 80px; height: 80px;
+      margin: 0 auto 24px;
+      background: linear-gradient(135deg, #ff3b3b, #ff6b6b);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 38px;
+      box-shadow: 0 0 30px rgba(255, 60, 60, 0.3);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 30px rgba(255, 60, 60, 0.3); }
+      50% { box-shadow: 0 0 50px rgba(255, 60, 60, 0.5); }
+    }
+
+    h1 {
+      font-size: 1.75rem; font-weight: 800;
+      color: #ff4d4d; margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 1rem; color: #a1a1aa;
+      line-height: 1.6; margin-bottom: 20px;
+    }
+
+    /* Risk Badge */
+    .risk-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 16px; border-radius: 20px;
+      font-size: 0.78rem; font-weight: 700;
+      margin-bottom: 20px;
+      animation: fadeIn 0.8s ease-out 0.3s both;
+    }
+    .risk-high {
+      background: rgba(239, 68, 68, 0.12); color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+    .risk-medium {
+      background: rgba(250, 204, 21, 0.12); color: #facc15;
+      border: 1px solid rgba(250, 204, 21, 0.25);
+    }
+    .risk-low {
+      background: rgba(34, 197, 94, 0.12); color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.25);
+    }
+
+    /* AI Explanation Card */
+    .explanation-card {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 18px 22px;
+      margin-bottom: 20px;
+      text-align: left;
+      animation: fadeIn 0.8s ease-out 0.4s both;
+    }
+    .explanation-header {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 10px;
+    }
+    .explanation-icon {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: rgba(99, 102, 241, 0.15);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .explanation-title {
+      font-size: 0.7rem; text-transform: uppercase;
+      letter-spacing: 0.08em; color: #818cf8;
+      font-weight: 700;
+    }
+    .explanation-text {
+      font-size: 0.92rem; color: #d4d4d8;
+      line-height: 1.55; font-weight: 500;
+    }
+    .explanation-loading {
+      display: flex; align-items: center; gap: 10px;
+      color: #71717a; font-size: 0.85rem;
+    }
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(129, 140, 248, 0.3);
+      border-top-color: #818cf8;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Blocked URL */
+    .blocked-url {
+      display: inline-block;
+      background: rgba(255, 60, 60, 0.08);
+      border: 1px solid rgba(255, 60, 60, 0.2);
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-size: 0.82rem; color: #ff8a8a;
+      font-family: 'Courier New', monospace;
+      word-break: break-all; max-width: 100%;
+      margin-bottom: 28px;
+    }
+
+    /* Buttons */
+    .btn-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px; border-radius: 12px;
+      font-size: 0.9rem; font-weight: 600;
+      text-decoration: none; cursor: pointer;
+      border: none; transition: all 0.2s ease;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #ff3b3b, #e62e2e);
+      color: #fff; box-shadow: 0 4px 15px rgba(255, 60, 60, 0.3);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255, 60, 60, 0.4); }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06); color: #a1a1aa;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); color: #e4e4e7; transform: translateY(-2px); }
+
+    .footer { margin-top: 28px; font-size: 0.72rem; color: #52525b; }
+    .footer span { color: #ff4d4d; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="shield-icon">🛡️</div>
+    <h1>⚠ Harmful Website Blocked</h1>
+    <p class="subtitle">This website was detected as unsafe by AI.<br />NeuroGuard has blocked access to protect you.</p>
+
+    <!-- Risk Badge -->
+    <div class="risk-badge risk-high" id="riskBadge">🔴 High Risk</div>
+
+    <!-- AI Explanation -->
+    <div class="explanation-card">
+      <div class="explanation-header">
+        <div class="explanation-icon">🤖</div>
+        <div class="explanation-title">AI Threat Analysis</div>
+      </div>
+      <div id="explanationContent">
+        <div class="explanation-loading">
+          <div class="spinner"></div>
+          Generating AI analysis...
+        </div>
+      </div>
+    </div>
+
+    <!-- Blocked URL -->
+    <div class="blocked-url" id="blockedURL">Unknown URL</div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary" id="safetyBtn">🏠 Go to Safety</button>
+      <button class="btn btn-secondary" id="backBtn">← Go Back</button>
+    </div>
+
+    <p class="footer">Protected by <span>NeuroGuard AI</span></p>
+  </div>
+
+  <script src="blocked.js"></script>
+</body>
+</html>

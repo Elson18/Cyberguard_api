@@ -1,0 +1,33 @@
+{
+  "manifest_version": 3,
+  "name": "NeuroGuard - URL Monitor",
+  "version": "1.0.0",
+  "description": "Detects and monitors the currently active website URL in real time for AI-powered threat analysis.",
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://localhost:8765/*",
+    "http://127.0.0.1:8765/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "NeuroGuard — AI Threat Detection"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["blocked.html", "history.html"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
