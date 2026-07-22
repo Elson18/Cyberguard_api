@@ -1,1 +1,1 @@
-# Utility modules for CyberGuard unified platform
+# Utils package initialization

@@ -1,138 +1,142 @@
-import sys
-import os
 from pymongo import MongoClient
-import uuid
-from datetime import datetime
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import Config
-from database.db_connection import *
 
-config = Config()
-
-
-class MongoDb:
+class Database:
     def __init__(self):
-        try:
-            self.mongo_client = MongoClient(config.MONGO_DB_URL)
-            self.database = self.mongo_client["CyberChatbot"]
-            self.cyber_security_info = self.database["cyber_security"]
-            self.user_info = self.database["user_info"]
-            self.case_info = self.database["case_info"]
-            print("✅ MongoDB connected successfully.")
-        except Exception as e:
-            print("❌ MongoDB connection failed:", e)
+        self.client = None
+        self.db = None
 
+    def init_app(self, app):
+        mongo_uri = app.config.get("MONGO_URI", Config.MONGO_URI)
+        # Initialize MongoClient with reasonable timeout
+        self.client = MongoClient(mongo_uri, serverSelectionTimeoutMS=2000)
 
-    def cyber_security_info_table(self):
-        return self.cyber_security_info
-
-    def case_table(self):
-        return self.case_info
-
-    def user_info_table(self):
-        return self.user_info 
-    
-    def add_new_user(self, name, phone_no, email, password,re_password):
-
-        try:
-        #     # Avoid duplicates (check both phone and email)
-        #     existing = self.patfind_one({"email": email})
-
-        #     if existing:
-        #         print(" User already exists, skipping insert.")
-        #   # Generate custom patient ID
-            user_id = generate_custom_patient_id()
-
-            user_doc = {
-                "user_id": user_id,  # Ensure patient ID is stored
-                "name": name,
-                "phone_no": phone_no,
-                "email": email,
-                "password": password,
-                "confrim_password": re_password,
-                "PIN": str(uuid.uuid4()),
-                "created_at": datetime.now(),
-                "updated_at": datetime.now()
-            }
-
-            result = self.user_info.insert_one(user_doc)
-            print(f"New user inserted with patient_id: {user_id}")
-            return user_doc  # <-- Return the inserted document
-
-        except Exception as e:
-            print("Error adding new user:", e)
-            return None
+        # Extract db name from URI or use default
+        db_name = mongo_uri.split('/')[-1] if '/' in mongo_uri else 'student_rank_card_db'
+        if '?' in db_name:
+            db_name = db_name.split('?')[0]
+        if not db_name or db_name == 'localhost:27017' or db_name.startswith('localhost:'):
+            db_name = 'student_rank_card_db'
+            
+        self.db = self.client[db_name]
+        # Attach to app context for convenience
+        app.db = self.db
         
-
-    def add_cyber_info(self, dept_name, dept_phone_no, dept_email,state):
-
+        # Ensure Indexes
         try:
-            # Avoid duplicates (check both phone and email)
-        #     existing = self.cyber_security_info_table.find_one({"email": dept_email})
-
-        #     if existing:
-        #         print(" User already exists, skipping insert.")
-        #   # Generate custom patient ID
-            user_id = generate_custom_Cyber_id()
-
-            user_doc = {
-                "user_id": user_id,  # Ensure patient ID is stored
-                "Dept_name": dept_name,
-                "phone_no": dept_phone_no,
-                "email": dept_email,
-                "State": state,
-                "PIN": str(uuid.uuid4()),
-                "created_at": datetime.now(),
-                "updated_at": datetime.now()
-            }
-
-            result = self.cyber_security_info.insert_one(user_doc)
-            print(f"New user inserted with patient_id: {user_id}")
-            return user_doc  # <-- Return the inserted document
-
+            self._ensure_indexes()
         except Exception as e:
-            print("Error adding new user:", e)
-            return None
-    
-    def find_the_user(self, phone_or_email):
-        """Find patient by phone or email."""
-        try:
-            patient_filter = {"$or": [{"phone_no": phone_or_email}, {"email": phone_or_email}]}
-            user = self.user_info.find_one(patient_filter)
-            return user
-        except Exception as e:
-            print("Error finding user:", e)
-            return None
+            print(f"Warning: Could not initialize database indexes: {e}")
+        return self.db
+
         
-
-    def add_case(self, name, phone, email, department):
+    def _ensure_indexes(self):
+        if self.db is None:
+            return
+            
+        # Users indexes
+        self.db.users.create_index("userId", unique=True)
+        
+        # Teachers indexes
+        self.db.teachers.create_index("teacherId", unique=True)
+        self.db.teachers.create_index("userId", unique=True)
+        
+        # Students indexes
+        self.db.students.create_index("studentId", unique=True)
+        self.db.students.create_index("userId", unique=True)
+        self.db.students.create_index([("classId", 1), ("rollNumber", 1)], unique=True)
+        
+        # Classes indexes
+        self.db.classes.create_index([("className", 1), ("section", 1)], unique=True)
+        
+        # Subjects indexes
+        self.db.subjects.create_index("subjectName", unique=True)
+        
+        # Marks indexes: unique constraint for a student, class, subject, exam, academic year
+        self.db.marks.create_index([
+            ("studentId", 1),
+            ("classId", 1),
+            ("subjectId", 1),
+            ("exam", 1),
+            ("academicYear", 1)
+        ], unique=True)
+        
+        # Token Blocklist for blacklisting logged-out JWT tokens
+        self.db.token_blocklist.create_index("jti", unique=True)
+        self.db.token_blocklist.create_index("expiresAt", expireAfterSeconds=0)
+        
+        # Exams indexes
+        self.db.exams.create_index("examId", unique=True)
         try:
-            case_record = {
-                "department": department,
-                "user_name": name,
-                "user_phone_number": phone,
-                "user_email": email,
-                "status": "booked",
-                "created_at": datetime.now(),
-                "updated_at": datetime.now(),
-            }
-
-            result = self.case_info.insert_one(case_record)
-
-            print("Case filed successfully. Case ID:", result.inserted_id)
-
+            self.db.exams.create_index([("classId", 1), ("term", 1), ("academicYear", 1)], unique=True)
         except Exception as e:
-            print("Error filing case:", e)
-    def find_user_by_id(self, user_id):
-        return self.users.find_one({"user_id": user_id})
+            print(f"Warning: Could not build compound unique index for exams: {e}")
+        
+        # Audit logs index
+        self.db.audit_logs.create_index("timestamp")
+        
+        # Report Cards / Rankings indexes
+        self.db.report_cards.create_index([
+            ("studentId", 1),
+            ("classId", 1),
+            ("exam", 1),
+            ("academicYear", 1)
+        ], unique=True)
+        
+        # Compound unique index for new examId based report cards
+        self.db.report_cards.create_index([
+            ("studentId", 1),
+            ("classId", 1),
+            ("examId", 1)
+        ], unique=True, partialFilterExpression={"examId": {"$exists": True}})
+
+        # Discussions indexes
+        self.db.discussions.create_index("studentId")
+        self.db.discussions.create_index("teacherId")
+        self.db.discussions.create_index("discussionId", unique=True)
+        self.db.discussions.create_index("status")
+        self.db.discussions.create_index("createdAt")
+
+        # Discussion messages indexes
+        self.db.discussion_messages.create_index("discussionId")
+        self.db.discussion_messages.create_index("createdAt")
+
+        # Fee structures indexes
+        self.db.fee_structures.create_index("feeStructureId", unique=True)
+        self.db.fee_structures.create_index("status")
+        self.db.fee_structures.create_index("dueDate")
+        self.db.fee_structures.create_index("classIds")
+
+        # Student fees indexes
+        self.db.student_fees.create_index("studentId")
+        self.db.student_fees.create_index("classId")
+        self.db.student_fees.create_index("feeStructureId")
+        self.db.student_fees.create_index("status")
+        self.db.student_fees.create_index([("studentId", 1), ("feeStructureId", 1)], unique=True)
+
+        # Fee payments indexes
+        self.db.fee_payments.create_index("paymentId", unique=True)
+        self.db.fee_payments.create_index("studentId")
+        self.db.fee_payments.create_index("feeStructureId")
+        self.db.fee_payments.create_index("transactionId", unique=True, sparse=True)
+
+        # Fee notifications indexes
+        self.db.fee_notifications.create_index("studentId")
+
+        # Online Exam Questions indexes
+        self.db.exam_questions.create_index("examId")
+        self.db.exam_questions.create_index([("examId", 1), ("questionId", 1)], unique=True)
+
+        # Online Exam Attempts indexes
+        self.db.exam_attempts.create_index("attemptId", unique=True)
+        self.db.exam_attempts.create_index([("examId", 1), ("studentId", 1)], unique=True)
+
+        # Student Answers indexes
+        self.db.student_answers.create_index([("attemptId", 1), ("questionId", 1)], unique=True)
+
+        # Exam Results indexes
+        self.db.exam_results.create_index([("examId", 1), ("studentId", 1)], unique=True)
 
 
-if __name__ == "__main__":
-    print("Hello")
-    mongo = MongoDb()
-    d = mongo.add_cyber_info(dept_name="Tamil Nadu Cyber Crime Department",
-    dept_phone_no="+91 9791656265",
-    dept_email="gurubalan1707@gmail.com",
-    state="Tamil Nadu"
-)
+# Global database wrapper instance
+db_wrapper = Database()

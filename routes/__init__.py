@@ -1,1 +1,1 @@
-# Route modules for CyberGuard unified platform
+# Routes package initialization
