@@ -1,6 +1,7 @@
 import uuid
 from pymongo import MongoClient
 from config import Config
+from utils.helpers import hash_password
 
 class MongoDb:
     def __init__(self):
@@ -38,13 +39,14 @@ class MongoDb:
 
     def add_new_user(self, name, phone_no, email, password, re_password):
         user_id = f"USER-{str(uuid.uuid4())[:8].upper()}"
+        hashed_password = hash_password(password)
         user_doc = {
             "user_id": user_id,
             "userId": user_id,
             "name": name,
             "email": email,
             "phone_no": phone_no,
-            "password": password,
+            "password": hashed_password,
             "role": "USER",
             "active": True
         }

@@ -1,16 +1,3 @@
-"""
-CyberGuard - Gmail / Job Offer Verification Engine
-
-Purpose:
-    Analyze job-related emails and determine whether the sender
-    appears to be authorized to represent the claimed company.
-
-Classification:
-    AUTHORIZED
-    SUSPICIOUS
-    UNAUTHORIZED
-"""
-
 import json
 import os
 import re
@@ -21,9 +8,6 @@ from config import Config
 
 config = Config()
 
-# ============================================================
-# SYSTEM PROMPT
-# ============================================================
 
 EMAIL_VERIFICATION_SYSTEM_PROMPT = r"""
 You are CyberGuard Email Verification Agent.
@@ -673,9 +657,7 @@ def normalize_domain(domain: str) -> str:
     return domain
 
 
-# ============================================================
-# EMAIL VERIFICATION FUNCTION
-# ============================================================
+
 
 def verify_email(
     sender_name: str,

@@ -20,6 +20,7 @@ from routes.extension import router as extension_router
 from routes.email_verification import router as email_router
 from send_mail import send_cybercrime_report
 from severity import extract_severity
+from utils.helpers import check_password, hash_password
 from utils.rate_limit import limiter
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -200,8 +201,18 @@ def login_user(data: LoginRequest):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user.get("password") != data.password:
+    stored_pass = user.get("password", "")
+    if not check_password(data.password, stored_pass):
         raise HTTPException(status_code=401, detail="Invalid password")
+
+    # Seamless auto-migration: if password in DB was unhashed plaintext, upgrade it to bcrypt hash
+    if stored_pass == data.password and not stored_pass.startswith("$2"):
+        new_hash = hash_password(data.password)
+        if mongo.db is not None:
+            try:
+                mongo.db.users.update_one({"_id": user["_id"]}, {"$set": {"password": new_hash}})
+            except Exception as e:
+                print(f"Warning: Failed to upgrade plaintext password to bcrypt hash: {e}")
 
     return {"status": "success", "user_id": user["user_id"]}
 

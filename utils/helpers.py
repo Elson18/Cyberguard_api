@@ -8,11 +8,16 @@ def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
 
 def check_password(password: str, hashed: str) -> bool:
-    """Check a password against its bcrypt hash."""
-    try:
-        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
-    except Exception:
+    """Check a password against its bcrypt hash, with fallback for legacy plaintext."""
+    if not password or not hashed:
         return False
+    try:
+        if hashed.startswith('$2a$') or hashed.startswith('$2b$') or hashed.startswith('$2y$'):
+            return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+        else:
+            return password == hashed
+    except Exception:
+        return password == hashed
 
 def serialize_doc(doc):
     """Recursively convert MongoDB document BSON fields (like ObjectId, datetime) to JSON serializable formats."""

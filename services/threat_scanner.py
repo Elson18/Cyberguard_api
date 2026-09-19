@@ -98,12 +98,12 @@ Respond with JSON only:
 
 
 def _simulation_block(url: str) -> bool:
+    url_lower = url.lower()
     return any(
-        token in url
-        for token in (
-            "amtso.org/security-features-check/phishing-page",
-            "amtso.org/security-features-check/download-file",
-            "eicar.org/download-anti-malware-testfile",
+        domain in url_lower
+        for domain in (
+            "amtso.org",
+            "eicar.org",
         )
     )
 
