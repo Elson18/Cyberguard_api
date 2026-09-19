@@ -1,6 +1,7 @@
 import os
 
 from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, HttpUrl
 
 from services.extension_service import (

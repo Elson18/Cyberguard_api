@@ -55,9 +55,10 @@ chroma_client, chroma_db = _init_chroma()
 # -------------------------------------------------------
 # GROQ CLIENT
 # -------------------------------------------------------
-client = Groq(api_key=config.GROQ_API_KEY)
+groq_key = config.GROQ_API_KEY or os.getenv("GROQ_API_KEY") or "gsk_placeholder"
+client = Groq(api_key=groq_key)
 
-MODEL = "openai/gpt-oss-120b"
+MODEL = "llama-3.1-8b-instant"
 
 # -------------------------------------------------------
 # STATE
@@ -73,34 +74,41 @@ class AgentState(TypedDict, total=False):
 # -------------------------------------------------------
 # HELPER FUNCTION
 # -------------------------------------------------------
-def groq_chat(prompt: str, system_prompt: str = None):
+def groq_chat(prompt: str, system_prompt: str = None) -> str:
+    groq_api_key = config.GROQ_API_KEY or os.getenv("GROQ_API_KEY") or ""
+    if not groq_api_key.strip():
+        return "I am CyberGuard Incident Response Assistant. Please add your `GROQ_API_KEY` to the `.env` file to enable live AI LLM reasoning."
 
-    messages = []
+    try:
+        groq_client = Groq(api_key=groq_api_key.strip())
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
 
-    if system_prompt:
-        messages.append({
-            "role": "system",
-            "content": system_prompt
-        })
-
-    messages.append({
-        "role": "user",
-        "content": prompt
-    })
-
-    response = client.chat.completions.create(
-        model=MODEL,
-        messages=messages,
-        temperature=0.3
-    )
-
-    return response.choices[0].message.content
+        response = groq_client.chat.completions.create(
+            model=MODEL,
+            messages=messages,
+            temperature=0.3
+        )
+        return response.choices[0].message.content or ""
+    except Exception as err:
+        print(f"Groq API Error: {err}")
+        return f"CyberGuard Assistant: Could not connect to AI LLM service ({str(err)[:60]}). Please check your API key."
 
 
 # -------------------------------------------------------
 # CYBER INTENT CLASSIFIER
 # -------------------------------------------------------
 def classify_intent(query: str) -> bool:
+    keywords = [
+        "cyber", "hack", "scam", "fraud", "phishing", "virus", "malware",
+        "stolen", "harass", "threat", "police", "card", "otp", "bank", "account",
+        "breach", "blackmail", "ransom", "fake", "link", "spam", "hi", "hello", "help"
+    ]
+    query_lower = query.lower().strip()
+    if any(k in query_lower for k in keywords):
+        return True
 
     prompt = f"""
     Determine if the following user query is related to:
@@ -114,10 +122,11 @@ def classify_intent(query: str) -> bool:
     - cyber
     - general
     """
-
-    response = groq_chat(prompt)
-
-    return response.strip().lower() == "cyber"
+    try:
+        response = groq_chat(prompt)
+        return "cyber" in response.strip().lower()
+    except Exception:
+        return True
 
 
 # -------------------------------------------------------

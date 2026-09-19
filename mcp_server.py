@@ -54,6 +54,7 @@ app.include_router(extension_router)
 class QueryInput(BaseModel):
     query: str
     username: str
+    language: str | None = "en"
 
 
 class RegisterUser(BaseModel):
@@ -78,11 +79,11 @@ async def health():
     }
 
 
-async def run_cyber_agent(query: str):
+async def run_cyber_agent(query: str, language: str = "en"):
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(
         None,
-        lambda: cyber_graph.invoke({"user_query": query}),
+        lambda: cyber_graph.invoke({"user_query": query, "language": language}),
     )
 
 
@@ -90,10 +91,11 @@ async def run_cyber_agent(query: str):
 async def run_agent(data: QueryInput):
     try:
         query = data.query
+        language = data.language or "en"
         is_cyber = classify_intent(query)
 
         if is_cyber:
-            result = await run_cyber_agent(query)
+            result = await run_cyber_agent(query, language)
             final_answer = result.get("final_answer", "No response")
             severity = extract_severity(final_answer)
 
@@ -141,7 +143,7 @@ async def run_agent(data: QueryInput):
                 "redirect": False,
             }
 
-        answer = generate_response_groq(query)
+        answer = generate_response_groq(query, language=language)
         return {"answer": answer, "mode": "chatbot", "redirect": False}
 
     except Exception as exc:

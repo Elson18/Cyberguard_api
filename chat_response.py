@@ -19,11 +19,20 @@ import time
 # Initialize Groq client
 client = Groq(api_key=config.GROQ_API_KEY)
 
-def generate_response_groq(user_input, k=3, max_retries=5):
-
+def generate_response_groq(user_input, k=3, max_retries=3):
     # Retrieve context from ChromaDB
-    user_chunk = chromadb_model_Azure.response_query(user_input, k=k)
-    context = "\n".join(user_chunk)
+    try:
+        user_chunk = chromadb_model_Azure.response_query(user_input, k=k)
+        context = "\n".join(user_chunk)
+    except Exception as exc:
+        print(f"RAG retrieval error: {exc}")
+        context = ""
+
+    groq_api_key = config.GROQ_API_KEY or os.getenv("GROQ_API_KEY") or ""
+    if not groq_api_key.strip():
+        if context.strip():
+            return f"### Knowledge Base Context\n\n{context}"
+        return "CyberGuard Assistant is active. Please add your `GROQ_API_KEY` to the `.env` file for full AI LLM capabilities."
 
     prompt = f"""You are a helpful assistant.
 
@@ -36,22 +45,18 @@ Question:
 
     for attempt in range(max_retries):
         try:
+            client = Groq(api_key=groq_api_key.strip())
             response = client.chat.completions.create(
-                model="openai/gpt-oss-120b",   # You can also use mixtral-8x7b-32768
-                messages=[
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
-                ],
+                model="llama-3.1-8b-instant",
+                messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,
                 max_tokens=1024
             )
-
             return response.choices[0].message.content
-
         except Exception as e:
             print(f"Attempt {attempt + 1} failed: {e}")
-            time.sleep(2 ** attempt)  # exponential backoff
+            time.sleep(1)
 
-    return "Unable to generate response at this time. Please try again later."
+    if context.strip():
+        return f"### Knowledge Base Context\n\n{context}"
+    return "Unable to generate AI response at this time. Please try again later."
