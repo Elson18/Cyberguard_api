@@ -73,6 +73,24 @@ class LoginRequest(BaseModel):
     password: str
 
 
+@app.get("/")
+def root():
+    return {
+        "status": "online",
+        "service": "CyberGuard Unified Platform API",
+        "version": "1.0.0",
+        "message": "CyberGuard AI Cybersecurity & Email Verification Backend API is running successfully.",
+        "documentation": "/docs",
+        "endpoints": {
+            "health": "/api/health",
+            "extension_scan": "/api/extension/scan-url",
+            "email_verification": "/api/email/verify",
+            "ai_query": "/query",
+            "incident_report": "/report"
+        }
+    }
+
+
 @app.get("/api/health")
 async def health():
     return {
