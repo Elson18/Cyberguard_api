@@ -17,6 +17,7 @@ from agentic.agent import classify_intent, graph
 from chat_response import generate_response_groq
 from database.mongodb import MongoDb
 from routes.extension import router as extension_router
+from routes.email_verification import router as email_router
 from send_mail import send_cybercrime_report
 from severity import extract_severity
 from utils.rate_limit import limiter
@@ -49,6 +50,7 @@ print("Cyber Agent ready!")
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.include_router(extension_router)
+app.include_router(email_router)
 
 
 class QueryInput(BaseModel):
