@@ -27,19 +27,31 @@ embedding_fn = HuggingFaceEmbeddings(
 # CHROMADB
 # -------------------------------------------------------
 import os
-
-import os
+import shutil
 import chromadb
 
-chroma_client = chromadb.PersistentClient(
-    path=config.PERSIST_DIRECTORY
-)
+def _init_chroma():
+    target_dir = config.PERSIST_DIRECTORY
+    try:
+        client = chromadb.PersistentClient(path=target_dir)
+        db = Chroma(
+            collection_name=config.COLLECTION_NAME,
+            client=client,
+            embedding_function=embedding_fn,
+        )
+        return client, db
+    except Exception as exc:
+        print(f"Warning: Stale ChromaDB database schema detected ({exc}). Initializing fresh vector store...")
+        target_dir = os.path.join(os.path.dirname(config.PERSIST_DIRECTORY), "chroma_store_v2")
+        client = chromadb.PersistentClient(path=target_dir)
+        db = Chroma(
+            collection_name=config.COLLECTION_NAME,
+            client=client,
+            embedding_function=embedding_fn,
+        )
+        return client, db
 
-chroma_db = Chroma(
-    collection_name=config.COLLECTION_NAME,
-    client=chroma_client,
-    embedding_function=embedding_fn,
-)
+chroma_client, chroma_db = _init_chroma()
 # -------------------------------------------------------
 # GROQ CLIENT
 # -------------------------------------------------------

@@ -1,5 +1,76 @@
+import uuid
 from pymongo import MongoClient
 from config import Config
+
+class MongoDb:
+    def __init__(self):
+        mongo_uri = getattr(Config, "MONGO_URI", "mongodb://localhost:27017/cyberguard_db")
+        try:
+            self.client = MongoClient(mongo_uri, serverSelectionTimeoutMS=2000)
+            db_name = mongo_uri.split('/')[-1].split('?')[0] if '/' in mongo_uri else 'cyberguard_db'
+            if not db_name or 'localhost' in db_name or db_name == 'student_rank_card_db':
+                db_name = 'cyberguard_db'
+            self.db = self.client[db_name]
+        except Exception as e:
+            print(f"Warning: Could not connect to MongoDB: {e}")
+            self.client = None
+            self.db = None
+
+    def find_the_user(self, identifier: str):
+        if self.db is None:
+            return None
+        try:
+            user = self.db.users.find_one({
+                "$or": [
+                    {"email": identifier},
+                    {"userId": identifier},
+                    {"user_id": identifier},
+                    {"name": identifier}
+                ]
+            })
+            if user:
+                if "user_id" not in user and "userId" in user:
+                    user["user_id"] = user["userId"]
+            return user
+        except Exception as e:
+            print(f"Error finding user: {e}")
+            return None
+
+    def add_new_user(self, name, phone_no, email, password, re_password):
+        user_id = f"USER-{str(uuid.uuid4())[:8].upper()}"
+        user_doc = {
+            "user_id": user_id,
+            "userId": user_id,
+            "name": name,
+            "email": email,
+            "phone_no": phone_no,
+            "password": password,
+            "role": "USER",
+            "active": True
+        }
+        if self.db is not None:
+            try:
+                self.db.users.insert_one(user_doc)
+            except Exception as e:
+                print(f"Error inserting user: {e}")
+        return {"user_id": user_id}
+
+    def add_case(self, fullname, phone, email, department="Cybercrime"):
+        case_id = f"CASE-{str(uuid.uuid4())[:8].upper()}"
+        case_doc = {
+            "case_id": case_id,
+            "fullname": fullname,
+            "phone": phone,
+            "email": email,
+            "department": department
+        }
+        if self.db is not None:
+            try:
+                self.db.cases.insert_one(case_doc)
+            except Exception as e:
+                print(f"Error inserting case: {e}")
+        return {"case_id": case_id}
+
 
 class Database:
     def __init__(self):
@@ -8,135 +79,41 @@ class Database:
 
     def init_app(self, app):
         mongo_uri = app.config.get("MONGO_URI", Config.MONGO_URI)
-        # Initialize MongoClient with reasonable timeout
         self.client = MongoClient(mongo_uri, serverSelectionTimeoutMS=2000)
 
-        # Extract db name from URI or use default
-        db_name = mongo_uri.split('/')[-1] if '/' in mongo_uri else 'student_rank_card_db'
+        db_name = mongo_uri.split('/')[-1] if '/' in mongo_uri else 'cyberguard_db'
         if '?' in db_name:
             db_name = db_name.split('?')[0]
-        if not db_name or db_name == 'localhost:27017' or db_name.startswith('localhost:'):
-            db_name = 'student_rank_card_db'
+        if not db_name or 'localhost:' in db_name or db_name == 'student_rank_card_db':
+            db_name = 'cyberguard_db'
             
         self.db = self.client[db_name]
-        # Attach to app context for convenience
         app.db = self.db
         
-        # Ensure Indexes
         try:
             self._ensure_indexes()
         except Exception as e:
             print(f"Warning: Could not initialize database indexes: {e}")
         return self.db
 
-        
     def _ensure_indexes(self):
         if self.db is None:
             return
             
         # Users indexes
         self.db.users.create_index("userId", unique=True)
+        self.db.users.create_index("email", unique=True, sparse=True)
         
-        # Teachers indexes
-        self.db.teachers.create_index("teacherId", unique=True)
-        self.db.teachers.create_index("userId", unique=True)
+        # Incident cases indexes
+        self.db.cases.create_index("case_id", unique=True)
+        self.db.cases.create_index("email")
         
-        # Students indexes
-        self.db.students.create_index("studentId", unique=True)
-        self.db.students.create_index("userId", unique=True)
-        self.db.students.create_index([("classId", 1), ("rollNumber", 1)], unique=True)
-        
-        # Classes indexes
-        self.db.classes.create_index([("className", 1), ("section", 1)], unique=True)
-        
-        # Subjects indexes
-        self.db.subjects.create_index("subjectName", unique=True)
-        
-        # Marks indexes: unique constraint for a student, class, subject, exam, academic year
-        self.db.marks.create_index([
-            ("studentId", 1),
-            ("classId", 1),
-            ("subjectId", 1),
-            ("exam", 1),
-            ("academicYear", 1)
-        ], unique=True)
-        
-        # Token Blocklist for blacklisting logged-out JWT tokens
+        # Token Blocklist
         self.db.token_blocklist.create_index("jti", unique=True)
         self.db.token_blocklist.create_index("expiresAt", expireAfterSeconds=0)
         
-        # Exams indexes
-        self.db.exams.create_index("examId", unique=True)
-        try:
-            self.db.exams.create_index([("classId", 1), ("term", 1), ("academicYear", 1)], unique=True)
-        except Exception as e:
-            print(f"Warning: Could not build compound unique index for exams: {e}")
-        
         # Audit logs index
         self.db.audit_logs.create_index("timestamp")
-        
-        # Report Cards / Rankings indexes
-        self.db.report_cards.create_index([
-            ("studentId", 1),
-            ("classId", 1),
-            ("exam", 1),
-            ("academicYear", 1)
-        ], unique=True)
-        
-        # Compound unique index for new examId based report cards
-        self.db.report_cards.create_index([
-            ("studentId", 1),
-            ("classId", 1),
-            ("examId", 1)
-        ], unique=True, partialFilterExpression={"examId": {"$exists": True}})
-
-        # Discussions indexes
-        self.db.discussions.create_index("studentId")
-        self.db.discussions.create_index("teacherId")
-        self.db.discussions.create_index("discussionId", unique=True)
-        self.db.discussions.create_index("status")
-        self.db.discussions.create_index("createdAt")
-
-        # Discussion messages indexes
-        self.db.discussion_messages.create_index("discussionId")
-        self.db.discussion_messages.create_index("createdAt")
-
-        # Fee structures indexes
-        self.db.fee_structures.create_index("feeStructureId", unique=True)
-        self.db.fee_structures.create_index("status")
-        self.db.fee_structures.create_index("dueDate")
-        self.db.fee_structures.create_index("classIds")
-
-        # Student fees indexes
-        self.db.student_fees.create_index("studentId")
-        self.db.student_fees.create_index("classId")
-        self.db.student_fees.create_index("feeStructureId")
-        self.db.student_fees.create_index("status")
-        self.db.student_fees.create_index([("studentId", 1), ("feeStructureId", 1)], unique=True)
-
-        # Fee payments indexes
-        self.db.fee_payments.create_index("paymentId", unique=True)
-        self.db.fee_payments.create_index("studentId")
-        self.db.fee_payments.create_index("feeStructureId")
-        self.db.fee_payments.create_index("transactionId", unique=True, sparse=True)
-
-        # Fee notifications indexes
-        self.db.fee_notifications.create_index("studentId")
-
-        # Online Exam Questions indexes
-        self.db.exam_questions.create_index("examId")
-        self.db.exam_questions.create_index([("examId", 1), ("questionId", 1)], unique=True)
-
-        # Online Exam Attempts indexes
-        self.db.exam_attempts.create_index("attemptId", unique=True)
-        self.db.exam_attempts.create_index([("examId", 1), ("studentId", 1)], unique=True)
-
-        # Student Answers indexes
-        self.db.student_answers.create_index([("attemptId", 1), ("questionId", 1)], unique=True)
-
-        # Exam Results indexes
-        self.db.exam_results.create_index([("examId", 1), ("studentId", 1)], unique=True)
 
 
-# Global database wrapper instance
 db_wrapper = Database()
