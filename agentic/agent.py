@@ -58,7 +58,7 @@ chroma_client, chroma_db = _init_chroma()
 groq_key = config.GROQ_API_KEY or os.getenv("GROQ_API_KEY") or "gsk_placeholder"
 client = Groq(api_key=groq_key)
 
-MODEL = "llama-3.1-8b-instant"
+MODEL = "openai/gpt-oss-20b"
 
 # -------------------------------------------------------
 # STATE
@@ -253,30 +253,40 @@ def generate_answer(state: AgentState):
     )
 
     prompt = f"""
-    Create a structured cybercrime help response.
+    Create a highly structured, attractive, and empathetic cybercrime response guide in clean Markdown.
+    Do NOT use a 2-column table with 'Section | Details'. Instead, use clean Markdown headers, quote boxes, bullet lists, and numbered action steps.
 
-    User Query:
-    {state['user_query']}
+    User Query: "{state['user_query']}"
+    Issue Category: {state['issue_type']}
+    Threat Data: {json.dumps(state['threat_json'], indent=2)}
+    Escalation Status: {json.dumps(state.get('escalation_data', {}), indent=2)}
+    SOP Knowledge Base: {rag_text}
 
-    Issue:
-    {state['issue_type']}
+    Structure your response using these exact Markdown sections:
 
-    Threat:
-    {json.dumps(state['threat_json'], indent=2)}
+    ### 📌 Incident Summary
+    > Provide a brief 1-2 sentence empathetic summary of what the user is facing.
 
-    Escalation:
-    {json.dumps(state.get('escalation_data', {}), indent=2)}
+    ### 🛡️ Threat & Risk Assessment
+    - **Issue Identified**: {state['issue_type']}
+    - **Severity Level**: **{state['threat_json'].get('severity', 'Medium')}**
+    - **Immediate Escalation Required**: {"Yes" if state.get('threat_json', {}).get('requires_escalation') else "No"}
 
-    SOP:
-    {rag_text}
+    ### ⚡ Immediate Emergency Actions
+    1. **Do NOT Pay or Comply**: Explain clearly why compliance does not stop extortion.
+    2. **Preserve Digital Evidence**: Take screenshots of every message, chat export, and header.
+    3. **Block the Harasser**: Block all communication channels immediately.
+    4. **Secure Your Accounts**: Change passwords and enable 2-Factor Authentication (2FA).
 
-    Provide:
-    - Issue Identified
-    - Threat Assessment
-    - Emergency Actions
-    - Step-by-step user instructions
-    - Evidence Required
-    - Reporting Link
+    ### 📋 Step-by-Step Action Plan
+    Numbered step-by-step instructions tailored specifically to this query.
+
+    ### 📁 Evidence Collection Checklist
+    Bullet points of exact evidence items to collect before filing a police report.
+
+    ### 🔗 Official Reporting Links
+    - **National Cyber Crime Portal**: [cybercrime.gov.in](https://www.cybercrime.gov.in)
+    - **National Helpline**: Call **1930** (Toll-Free)
     """
 
     answer = groq_chat(prompt)

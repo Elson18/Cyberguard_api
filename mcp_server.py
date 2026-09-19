@@ -100,31 +100,44 @@ async def run_agent(data: QueryInput):
             severity = extract_severity(final_answer)
 
             if severity in ["low"]:
-                severity_message = (
-                    "Low Threat Level\n\n"
-                    "I know this may feel uncomfortable, even if the risk is low. "
-                    "Staying aware and calm is enough, and support is always here if you need it"
-                )
+                severity_message = """<div class="threat-card threat-low">
+  <div class="threat-header"><span class="badge-pill">🛡️ LOW THREAT LEVEL</span></div>
+  <p>I know this may feel uncomfortable, even if the risk is low. Staying aware and calm is enough, and support is always here if you need it.</p>
+</div>"""
             elif severity in ["medium"]:
-                severity_message = (
-                    "Medium Threat Level\n\n"
-                    "It's understandable to feel worried in this situation. "
-                    "You're not alone, and taking careful steps can help you regain control"
-                )
+                severity_message = """<div class="threat-card threat-medium">
+  <div class="threat-header"><span class="badge-pill">⚠️ MEDIUM THREAT LEVEL</span></div>
+  <p>It's understandable to feel worried in this situation. You're not alone, and taking careful steps can help you regain control.</p>
+</div>"""
             elif severity in ["high", "urgent"]:
-                severity_message = (
-                    "High Threat Level\n\n"
-                    "I'm sorry you're facing something this serious—it's okay to feel overwhelmed. "
-                    "Your safety matters, and trusted help is available to support you"
-                )
+                severity_message = """<div class="threat-card threat-high">
+  <div class="threat-header"><span class="badge-pill">🚨 HIGH THREAT LEVEL — URGENT</span></div>
+  <p>I'm sorry you're facing something this serious—it's okay to feel overwhelmed. Your safety matters, and trusted help is available to support you.</p>
+</div>"""
             else:
                 severity_message = ""
 
-            helpline = """#### HELPLINE
-
-            ###Tamil Nadu: 044-29580300
-            ###Hyderabad: 040-29320049
-            ###Kerala: 0471-2300042"""
+            helpline = """<div class="helpline-wrapper">
+  <div class="helpline-title"><i class="fa-solid fa-phone-volume"></i> Emergency Cyber Crime Helplines</div>
+  <div class="helpline-grid">
+    <div class="helpline-item">
+      <span class="region">Tamil Nadu</span>
+      <a href="tel:04429580300" class="phone">044-29580300</a>
+    </div>
+    <div class="helpline-item">
+      <span class="region">Hyderabad</span>
+      <a href="tel:04029320049" class="phone">040-29320049</a>
+    </div>
+    <div class="helpline-item">
+      <span class="region">Kerala</span>
+      <a href="tel:04712300042" class="phone">0471-2300042</a>
+    </div>
+    <div class="helpline-item">
+      <span class="region">National Portal</span>
+      <a href="tel:1930" class="phone">1930 (Toll-Free)</a>
+    </div>
+  </div>
+</div>"""
             full_answer = f"{severity_message}\n\n{final_answer}\n\n{helpline}"
 
             if severity in ["high", "urgent"]:
