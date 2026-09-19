@@ -17,7 +17,6 @@ from agentic.agent import classify_intent, graph
 from chat_response import generate_response_groq
 from database.mongodb import MongoDb
 from routes.extension import router as extension_router
-from routes.frontend import FRONTEND_ROOT, router as frontend_router
 from send_mail import send_cybercrime_report
 from severity import extract_severity
 from utils.rate_limit import limiter
@@ -29,15 +28,16 @@ app = FastAPI(title="CyberGuard Unified Platform")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-_cors_origins = os.getenv(
-    "CORS_ORIGINS",
-    "http://localhost:8765,http://127.0.0.1:8765",
-).split(",")
+_raw_cors = os.getenv("CORS_ORIGINS", "*")
+if _raw_cors.strip() == "*":
+    _cors_origins = ["*"]
+else:
+    _cors_origins = [o.strip() for o in _raw_cors.split(",") if o.strip()]
 
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin.strip() for origin in _cors_origins if origin.strip()],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -48,10 +48,6 @@ cyber_graph = graph
 print("Cyber Agent ready!")
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-if os.path.isdir(FRONTEND_ROOT):
-    app.mount("/cyberguard", StaticFiles(directory=FRONTEND_ROOT), name="cyberguard")
-
-app.include_router(frontend_router)
 app.include_router(extension_router)
 
 
@@ -76,9 +72,9 @@ class LoginRequest(BaseModel):
 @app.get("/api/health")
 async def health():
     return {
-        "message": "CyberGuard Unified Platform",
+        "message": "CyberGuard Unified API Server",
         "status": "running",
-        "frontend": os.path.isdir(FRONTEND_ROOT),
+        "mode": "standalone_api",
     }
 
 
@@ -135,7 +131,7 @@ async def run_agent(data: QueryInput):
                     "severity": severity,
                     "mode": "agent",
                     "redirect": True,
-                    "redirect_url": "/complaint-form",
+                    "redirect_url": "complaint.html",
                 }
 
             return {
@@ -193,12 +189,7 @@ def login_user(data: LoginRequest):
     return {"status": "success", "user_id": user["user_id"]}
 
 
-@app.get("/complaint-form")
-def complaint_form():
-    cyberguard_complaint = os.path.join(FRONTEND_ROOT, "complaint.html")
-    if os.path.isfile(cyberguard_complaint):
-        return FileResponse(cyberguard_complaint)
-    return FileResponse(os.path.join(STATIC_DIR, "complaint.html"))
+
 
 
 @app.post("/report")
