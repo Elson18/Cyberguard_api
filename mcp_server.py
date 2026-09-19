@@ -4,7 +4,9 @@ import traceback
 from typing import List
 
 import uvicorn
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+import random
+import time
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -256,6 +258,177 @@ async def report_incident(
         screenshots=screenshot,
     )
     return {"message": "Incident reported successfully"}
+
+
+VOICE_QUESTIONS = [
+    {
+        "step": 0,
+        "key": "what_happened",
+        "question": "Can you tell me what happened?",
+        "field_name": "What happened",
+    },
+    {
+        "step": 1,
+        "key": "when_happened",
+        "question": "When did this happen?",
+        "field_name": "Date / time",
+    },
+    {
+        "step": 2,
+        "key": "where_happened",
+        "question": "Where did this happen?",
+        "field_name": "Location / platform",
+    },
+    {
+        "step": 3,
+        "key": "who_involved",
+        "question": "Do you have any details about the person or organization involved?",
+        "field_name": "People / organization involved",
+    },
+    {
+        "step": 4,
+        "key": "additional_details",
+        "question": "Is there anything else you'd like to add?",
+        "field_name": "Additional details",
+    },
+]
+
+
+class VoiceComplaintRequest(BaseModel):
+    what_happened: str
+    when_happened: str | None = "Not specified"
+    where_happened: str | None = "Not specified"
+    who_involved: str | None = "Not specified"
+    additional_details: str | None = "None"
+
+
+@app.websocket("/ws/voice-complaint")
+async def voice_complaint_websocket(websocket: WebSocket):
+    await websocket.accept()
+    session_data = {
+        "what_happened": "",
+        "when_happened": "",
+        "where_happened": "",
+        "who_involved": "",
+        "additional_details": "",
+    }
+    current_step = 0
+    total_steps = len(VOICE_QUESTIONS)
+
+    await websocket.send_json({
+        "type": "INIT",
+        "step": 0,
+        "total_steps": total_steps,
+        "question": VOICE_QUESTIONS[0]["question"],
+        "field_name": VOICE_QUESTIONS[0]["field_name"]
+    })
+
+    try:
+        while True:
+            data = await websocket.receive_json()
+            msg_type = data.get("type")
+
+            if msg_type == "START":
+                current_step = 0
+                await websocket.send_json({
+                    "type": "QUESTION",
+                    "step": 0,
+                    "total_steps": total_steps,
+                    "question": VOICE_QUESTIONS[0]["question"],
+                    "field_name": VOICE_QUESTIONS[0]["field_name"]
+                })
+
+            elif msg_type == "ANSWER":
+                user_answer = data.get("answer", "").strip()
+                if current_step < total_steps:
+                    key = VOICE_QUESTIONS[current_step]["key"]
+                    session_data[key] = user_answer or "Not specified"
+                    current_step += 1
+
+                if current_step < total_steps:
+                    await websocket.send_json({
+                        "type": "QUESTION",
+                        "step": current_step,
+                        "total_steps": total_steps,
+                        "question": VOICE_QUESTIONS[current_step]["question"],
+                        "field_name": VOICE_QUESTIONS[current_step]["field_name"],
+                        "recorded": session_data
+                    })
+                else:
+                    await websocket.send_json({
+                        "type": "REVIEW",
+                        "summary": session_data,
+                        "message": "Does everything look correct?"
+                    })
+
+            elif msg_type == "REPEAT_QUESTION":
+                if current_step < total_steps:
+                    await websocket.send_json({
+                        "type": "QUESTION",
+                        "step": current_step,
+                        "total_steps": total_steps,
+                        "question": VOICE_QUESTIONS[current_step]["question"],
+                        "field_name": VOICE_QUESTIONS[current_step]["field_name"],
+                        "is_repeat": True
+                    })
+
+            elif msg_type == "UPDATE_FIELD":
+                field_key = data.get("key")
+                field_val = data.get("value")
+                if field_key in session_data:
+                    session_data[field_key] = field_val
+                await websocket.send_json({
+                    "type": "REVIEW",
+                    "summary": session_data,
+                    "message": "Does everything look correct?"
+                })
+
+            elif msg_type == "CONFIRM_SUBMIT":
+                ref_num = f"REF-{time.strftime('%Y')}-{random.randint(10000, 99999)}"
+                if mongo.db is not None:
+                    try:
+                        mongo.db.voice_complaints.insert_one({
+                            "reference_number": ref_num,
+                            "summary": session_data,
+                            "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
+                        })
+                    except Exception as err:
+                        print("Failed to store voice complaint in mongo:", err)
+
+                await websocket.send_json({
+                    "type": "SUBMITTED",
+                    "reference_number": ref_num,
+                    "summary": session_data,
+                    "message": "Your complaint has been submitted successfully."
+                })
+
+    except WebSocketDisconnect:
+        print("Voice complaint WebSocket client disconnected")
+    except Exception as e:
+        print("WebSocket Error:", e)
+
+
+@app.post("/api/complaint/submit-voice")
+async def submit_voice_complaint(data: VoiceComplaintRequest):
+    ref_num = f"REF-{time.strftime('%Y')}-{random.randint(10000, 99999)}"
+    record = {
+        "reference_number": ref_num,
+        "summary": data.model_dump(),
+        "created_at": time.strftime("%Y-%m-%d %H:%M:%S")
+    }
+    if mongo.db is not None:
+        try:
+            mongo.db.voice_complaints.insert_one(record)
+        except Exception as err:
+            print("Failed to store voice complaint in mongo:", err)
+
+    return {
+        "status": "success",
+        "reference_number": ref_num,
+        "summary": record["summary"],
+        "created_at": record["created_at"],
+        "message": "Your complaint has been submitted successfully."
+    }
 
 
 if __name__ == "__main__":
